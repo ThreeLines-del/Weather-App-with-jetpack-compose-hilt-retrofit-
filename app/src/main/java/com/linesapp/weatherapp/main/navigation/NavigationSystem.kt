@@ -2,7 +2,7 @@ package com.linesapp.weatherapp.main.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
@@ -20,7 +20,6 @@ import com.linesapp.weatherapp.main.ui.screen.WeatherScreen
 @Composable
 fun NavigationSystem(){
     val navController = rememberNavController()
-    val sharedString = remember { mutableStateOf("Paris") }
     NavHost(navController = navController, startDestination = "route1"){
         navigation(
             startDestination = "weather_screen",
@@ -28,8 +27,9 @@ fun NavigationSystem(){
         ){
             composable("weather_screen") { entry ->
                 val viewModel = entry.weatherViewModel<WeatherViewModel>(navController = navController)
-                val state = viewModel.getCurrentWeather(sharedString.value).collectAsState(initial = null)
-                val forecast = viewModel.getForecast(sharedString.value).collectAsState(initial = null)
+                val searchText = viewModel.searchText.collectAsState()
+                val state = viewModel.getCurrentWeather(searchText.value).collectAsState(initial = null)
+                val forecast = viewModel.getForecast(searchText.value).collectAsState(initial = null)
 
                 WeatherScreen(
                     current = state,
@@ -38,7 +38,6 @@ fun NavigationSystem(){
                     },
                     onNavigateToSearch = {
                         navController.navigate("search_screen")
-                        sharedString.value = ""
                     },
                     forecastState = forecast
                 )
@@ -46,7 +45,8 @@ fun NavigationSystem(){
             }
             composable("weather_detail_screen"){ entry ->
                 val viewModel = entry.weatherViewModel<WeatherViewModel>(navController = navController)
-                val state = viewModel.getCurrentWeather(sharedString.value).collectAsState(initial = null)
+                val searchText = viewModel.searchText.collectAsState()
+                val state = viewModel.getCurrentWeather(searchText.value).collectAsState(initial = null)
 
                 WeatherDetailScreen(
                     current = state
@@ -54,11 +54,16 @@ fun NavigationSystem(){
             }
             composable("search_screen"){ entry ->
                 val viewModel = entry.weatherViewModel<WeatherViewModel>(navController = navController)
+                val searchText = viewModel.searchText.collectAsState()
+                val isSearching by viewModel.isSearching.collectAsState()
+                val city by viewModel.city.collectAsState()
 
                 SearchScreen(
-                    viewModel = viewModel,
                     navController = navController,
-                    sharedString = sharedString
+                    viewModel = viewModel,
+                    searchText = searchText,
+                    isSearching = isSearching,
+                    city = city
                 )
             }
 

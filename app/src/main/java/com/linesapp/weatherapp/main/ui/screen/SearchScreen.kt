@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -18,6 +19,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,32 +45,13 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
-    viewModel: WeatherViewModel,
     navController: NavController,
-    sharedString: MutableState<String>
+    viewModel: WeatherViewModel,
+    searchText: State<String>,
+    isSearching: Boolean,
+    city: List<ResponseSearchItem>
 ){
-    val searchQuery by remember { mutableStateOf(sharedString) }
 
-    var isLoading by remember(searchQuery) {
-        mutableStateOf(false)
-    }
-
-
-    val coroutineScope = rememberCoroutineScope()
-
-    var searchItems by remember (searchQuery){
-        mutableStateOf(emptyList<ResponseSearchItem>())
-            .apply {
-                coroutineScope.launch {
-                    delay(3000)
-                    if(searchQuery.value.isNotBlank()){
-                        isLoading = true
-                        value = viewModel.searchWeatherFlow(searchQuery.value).first()
-                        isLoading = false
-                    }
-                }
-            }
-    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -86,17 +70,10 @@ fun SearchScreen(
             modifier = Modifier
                 .padding(5.dp)
                 .fillMaxWidth(),
-            value = searchQuery.value ,
-            onValueChange = {
-                searchQuery.value = it
-                coroutineScope.launch {
-                    delay(500)
-                    if(it == searchQuery.value && searchQuery.value.isNotBlank()){
-                        isLoading = true
-                        searchItems = viewModel.searchWeatherFlow(searchQuery.value).first()
-                        isLoading = false
-                    }
-                }
+            value = searchText.value ,
+            onValueChange = {newValue ->
+                viewModel.setSearchText(newValue)
+                viewModel.performSearch()
             },
             placeholder = {
                 Text(
@@ -108,7 +85,7 @@ fun SearchScreen(
             }
         )
         Spacer(modifier = Modifier.height(10.dp))
-        if (isLoading) {
+        if (isSearching) {
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
@@ -124,25 +101,22 @@ fun SearchScreen(
                 modifier = Modifier
                     .padding(10.dp)
             ){
-                items(searchItems.size){ index ->
-                    val searchLocation = searchItems[index]
-
+                items(city){ cityName ->
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable{
+                            .clickable {
                                 navController.navigate("weather_screen")
-                                searchQuery.value = searchLocation.name
                             }
                     ) {
                         Text(
                             modifier = Modifier,
-                            text = searchLocation.name,
+                            text = cityName.name,
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Normal
                         )
                         Text(
-                            text = searchLocation.country,
+                            text = cityName.country,
                             fontSize = 15.sp,
                         )
                     }
@@ -152,9 +126,3 @@ fun SearchScreen(
         }
     }
 }
-
-//@Composable
-//@Preview
-//fun SearchScreenPreview(){
-//    SearchScreen()
-//}
